@@ -7,7 +7,7 @@ testjson_path <- "~/R Projects/slack-exports/exportunzip/general/2020-06-13.json
 #import JSON file as a list
 import_day <- fromJSON(file = testjson_path)
 
-
+#function to convert a single JSON file into a dataframe with specific fields extracted
 slack_json_to_dataframe <- function(slack_json) {
   #blank table with correct colnames:
   messages_test <- setNames(data.frame(matrix(ncol = 10, nrow = 0)), 
