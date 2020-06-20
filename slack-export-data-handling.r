@@ -13,18 +13,10 @@ channel_list <- setNames(data.frame(matrix(ncol = 9, nrow = 0)),
                           c("ch_id", "name", "created", "creator", "is_archived",
                             "is_general", "members", "topic", "purpose"))
 
-#For each channel make a list of all the individual JSON files (one file per day of activity)
-#Add that list to the channels_json object as a list in each channel: channels_json[[channel]]$dayslist
-channel_folder_path <- ""
-for (channel in 1:length(channels_json)) {
-  channels_json[[channel]]$dayslist <- ""
-  channel_folder_path <- paste0(slackexport_folder_path,"/",channel_list[channel,"name"])
-  channels_json[[channel]]$dayslist <- list.files(channel_folder_path, 
-                                                  pattern=NULL, all.files=FALSE, full.names=FALSE)
-}
 
-#Make a df (channel_list) with information about each channel, from the JSON file
+#Create channel_list df with channel information, and add a file list into channels_json
 for (channel in 1:length(channels_json)) { 
+  #Make a df (channel_list) with information about each channel, from the JSON file
   channel_list[channel, "ch_id"] <- channels_json[[channel]]$id
   channel_list[channel, "name"] <- channels_json[[channel]]$name
   channel_list[channel, "created"] <- channels_json[[channel]]$created
@@ -46,6 +38,15 @@ for (channel in 1:length(channels_json)) {
   channel_list[channel, "members"] <- memberlist
   channel_list[channel, "topic"] <- channels_json[[channel]]$topic$value
   channel_list[channel, "purpose"] <- channels_json[[channel]]$purpose$value
+
+  #For each channel make a list of all the individual JSON files (one file per day of activity)
+  #Add that list to the channels_json object as a list in each channel: channels_json[[channel]]$dayslist
+  channel_folder_path <- ""
+  channels_json[[channel]]$dayslist <- ""
+  channel_folder_path <- paste0(slackexport_folder_path,"/",channel_list[channel,"name"])
+  channels_json[[channel]]$dayslist <- list.files(channel_folder_path, 
+                                                  pattern=NULL, all.files=FALSE, full.names=FALSE)
+  
 }
 
 #TODO: For each channel, for each day of activity:
@@ -53,7 +54,8 @@ for (channel in 1:length(channels_json)) {
   #convert it to a df with desired fields extracted (PLUS channel name)
   #and rbind ALL of those dfs to the same giant df
 
-#import JSON file as a list
+#import JSON file as a list (delete this once you get it all wrapped up
+#in a function to pull in all day files based on channel lists)
 import_day <- fromJSON(file = testjson_path)
 
 #function to convert a single JSON file into a dataframe with specific fields extracted
@@ -88,9 +90,16 @@ slack_json_to_dataframe <- function(slack_json) {
 }
 
 #test: This returns the list we expect!
-#slack_json_to_dataframe(import_day)
+#import_day_df <- slack_json_to_dataframe(import_day)
 
 #TODO - Run slack_json_to_dataframe() on all individual files in a channel (1 file / channel / day), and bind them into a single df
-
+for (file in 1:length(channel_list)) {
+  #import the json file
+  filejson_path <- 
+  import_file_json <-fromJSON(file = filejson_path)
+  #convert that json file to df
+  import_file_df <- slack_json_to_dataframe(import_file_json)
+  
+}
 
 #TODO - how does it handle orphaned threads? or deleted children? 
