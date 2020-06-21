@@ -1,9 +1,13 @@
 library(rjson) #import and manipulate JSON files
 library(dplyr) #data handling / pipe char
 
-#example file that has some odd threaded/rich text examples
-slackexport_folder_path <- "~/R Projects/slack-exports/exportunzip"
-testjson_path <- paste0(slackexport_folder_path,"/general/2020-06-13.json")
+#Unzip the slack export file
+#Put the unzipped folder in your R working directory (getwd() if you aren't sure where that is)
+#Copy the name of the unzipped file, change the next variable to match.
+#exportname <- "exportunzip" 
+exportname <- "CriminalSolvers Slack export Dec 1 2018 - Jun 20 2020"
+working_directory <- getwd() %>% as.character()
+slackexport_folder_path <- paste0(working_directory,"/",exportname)
 
 #Make a list of all channels present in the slack export
 #This information is all in the "<path>/exportname/channels.json" file
@@ -49,14 +53,6 @@ for (channel in 1:length(channels_json)) {
   
 }
 
-#TODO: For each channel, for each day of activity:
-  #import each JSON file, 
-  #convert it to a df with desired fields extracted (PLUS channel name)
-  #and rbind ALL of those dfs to the same giant df
-
-#import JSON file as a list (delete this once you get it all wrapped up
-#in a function to pull in all day files based on channel lists)
-import_day <- fromJSON(file = testjson_path)
 
 #function to convert a single JSON file into a dataframe with specific fields extracted
 slack_json_to_dataframe <- function(slack_json) {
@@ -66,40 +62,85 @@ slack_json_to_dataframe <- function(slack_json) {
                               "reply_users_count", "ts_latest_reply", "ts_thread", 
                               "parent_user_id"))
   #for each slack message (list item in JSON file), extract relevant fields 
-  for (message in 1:length(import_day)) { 
-    messages_df[message, "msg_id"] <- import_day[[message]]$client_msg_id
-    messages_df[message, "ts"] <- import_day[[message]]$ts
-    messages_df[message, "user"] <- import_day[[message]]$user
-    messages_df[message, "type"] <- import_day[[message]]$type
-    messages_df[message, "text"] <- import_day[[message]]$text
+  for (message in 1:length(slack_json)) { 
+    #messages with a file attached have no msg_id, just a file ID. Grab file ID if they have it, otherwise msg ID.
+    #TODO - something is wrong with messages_df$msg_id - it is recording as NA for all obs.
+    if (is.null(slack_json[[message]]$files$id) == FALSE) {
+      messages_df[message, "msg_id"] <- slack_json[[message]]$files$id
+    }
+    if (is.null(slack_json[[message]]$msg_id) == FALSE) { 
+      messages_df[message, "msg_id"] <- slack_json[[message]]$client_msg_id
+    } 
+    messages_df[message, "ts"] <- slack_json[[message]]$ts
+    messages_df[message, "user"] <- slack_json[[message]]$user
+    messages_df[message, "type"] <- slack_json[[message]]$type
+    messages_df[message, "text"] <- slack_json[[message]]$text
     #Some values only occur for parents or children of threads.
     #this will trigger for all parent messages
-    if (is.null(import_day[[message]]$reply_count) == FALSE) { 
-      messages_df[message, "reply_count"] <- import_day[[message]]$reply_count
-      messages_df[message, "reply_users_count"] <- import_day[[message]]$reply_users_count
-      messages_df[message, "ts_latest_reply"] <- import_day[[message]]$latest_reply
+    if (is.null(slack_json[[message]]$reply_count) == FALSE) { 
+      messages_df[message, "reply_count"] <- slack_json[[message]]$reply_count
+      messages_df[message, "reply_users_count"] <- slack_json[[message]]$reply_users_count
+      messages_df[message, "ts_latest_reply"] <- slack_json[[message]]$latest_reply
     }
     #this will trigger for all child messages
-    if (is.null(import_day[[message]]$parent_user_id) == FALSE) { 
-      messages_df[message, "ts_thread"] <- import_day[[message]]$thread_ts
-      messages_df[message, "parent_user_id"] <- import_day[[message]]$parent_user_id
+    if (is.null(slack_json[[message]]$parent_user_id) == FALSE) { 
+      messages_df[message, "ts_thread"] <- slack_json[[message]]$thread_ts
+      messages_df[message, "parent_user_id"] <- slack_json[[message]]$parent_user_id
     }
   }
   
   return(messages_df)
 }
 
-#test: This returns the list we expect!
-#import_day_df <- slack_json_to_dataframe(import_day)
 
-#TODO - Run slack_json_to_dataframe() on all individual files in a channel (1 file / channel / day), and bind them into a single df
-for (file in 1:length(channel_list)) {
-  #import the json file
-  filejson_path <- 
-  import_file_json <-fromJSON(file = filejson_path)
-  #convert that json file to df
-  import_file_df <- slack_json_to_dataframe(import_file_json)
-  
+#Run slack_json_to_dataframe() on all individual files in a channel (1 file / channel / day). 
+#Bind them into a single df for each channel; add the channel name as a column.
+#Finally, bind all of the individual channel dfs into a single dataframe for a given export!
+
+#initialize the df for ALL THE MESSAGES across multiple days in all channels
+all_channels_all_files_df <- setNames(data.frame(matrix(ncol = 12, nrow = 0)), 
+                                      c("msg_id", "ts", "user", "type", "text",
+                                        "reply_count", "reply_users_count", 
+                                        "ts_latest_reply", "ts_thread, parent_user_id",
+                                        "channel"))
+
+
+for (channel in 1:length(channels_json)) {
+  #initialize the df for ALL THE MESSAGES across multiple days in a single channel
+    all_channel_files_df <- setNames(data.frame(matrix(ncol = 10, nrow = 0)), 
+                             c("msg_id", "ts", "user", "type", "text",
+                               "reply_count", "reply_users_count", 
+                               "ts_latest_reply", "ts_thread, parent_user_id"))
+
+  for (file_day in 1:length(channels_json[[channel]]$dayslist)) {
+    #import the json file
+      parentfolder_path <- paste0(slackexport_folder_path,"/",channels_json[[channel]]$name)
+      filejson_path <- paste0(parentfolder_path, "/", channels_json[[channel]]$dayslist[[file_day]])
+      import_file_json <-fromJSON(file = filejson_path)
+    #initialize import_file_df for messages in a single day in a single channel
+      import_file_df <- setNames(data.frame(matrix(ncol = 10, nrow = 0)), 
+                                 c("msg_id", "ts", "user", "type", "text",
+                                   "reply_count", "reply_users_count", 
+                                   "ts_latest_reply", "ts_thread, parent_user_id"))
+    #convert json file to df
+    import_file_df <- slack_json_to_dataframe(import_file_json)
+    #bind the files together into a single df capturing all messages in a channel
+    all_channel_files_df <- rbind(all_channel_files_df,import_file_df)
+  }
+
+  #Backfill channel name in the giant df for the all_channel_files_df you just created
+  all_channel_files_df$channel <- channels_json[[channel]]$name
+  #Bind all_channel_files together so all messages in all channels are in one file
+  all_channels_all_files_df <- rbind(all_channels_all_files_df, all_channel_files_df)
 }
 
+#write the all files to a CSV in your R working directory
+#format: exportfoldername_mindate_to_maxdate.csv
+filename_mindate <- min(all_channels_all_files_df$ts) %>% as.numeric() %>% as.Date.POSIXct()
+filename_maxdate <- max(all_channels_all_files_df$ts) %>% as.numeric() %>% as.Date.POSIXct()
+  #Note exportfoldername was defined earlier before pulling in any of the files: exportname
+slack_export_df_filename <- paste0(exportname,"_",filename_mindate,"_to_",filename_maxdate,".csv")
+write.csv(all_channels_all_files_df, file = slack_export_df_filename)
+
 #TODO - how does it handle orphaned threads? or deleted children? 
+#TODO - make a users table with user profile information to join back to messages table
