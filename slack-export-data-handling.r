@@ -143,4 +143,42 @@ slack_export_df_filename <- paste0(exportname,"_",filename_mindate,"_to_",filena
 write.csv(all_channels_all_files_df, file = slack_export_df_filename)
 
 #TODO - how does it handle orphaned threads? or deleted children? 
-#TODO - make a users table with user profile information to join back to messages table
+#TODO - make a users table with user metadata, write to csv
+users_path <- paste0(slackexport_folder_path,"/users.json")
+users_json <- fromJSON(file = users_path)
+#initialize empty user df
+user_list_df <- setNames(data.frame(matrix(ncol = 11, nrow = 0)), 
+                         c("user_id", "team_id", "name", "deleted", "real_name",
+                           "tz", "tz_label", "tz_offset", "title", "display_name", 
+                           "is_bot"))
+#users 3 and 4 break this - check fields. Missing first_name and last_name. Don't need those...delete.
+for (user in 1:length(users_json)) {
+  #Make a df (user_list_df) with information about each user, from users.json
+  user_list_df[user, "user_id"] <- users_json[[user]]$id
+  user_list_df[user, "team_id"] <- users_json[[user]]$team_id
+  user_list_df[user, "name"] <- users_json[[user]]$name
+  user_list_df[user, "deleted"] <- users_json[[user]]$deleted
+  #real_name is in a different place for bots - its nested in $profile
+  if (is.null(users_json[[user]]$real_name) == FALSE) {
+    user_list_df[user, "real_name"] <- users_json[[user]]$real_name
+  }
+  if (is.null(users_json[[user]]$profile$real_name) == FALSE) {
+    user_list_df[user, "real_name"] <- users_json[[user]]$profile$real_name
+  }
+  user_list_df[user, "title"] <- users_json[[user]]$profile$title
+  user_list_df[user, "display_name"] <- users_json[[user]]$profile$display_name
+  user_list_df[user, "is_bot"] <- users_json[[user]]$is_bot
+  #bots (?not sure who else) don't have time zone information. catch that null
+  if (is.null(users_json[[user]]$tz) == FALSE) {
+    user_list_df[user, "tz"] <- users_json[[user]]$tz
+    user_list_df[user, "tz_label"] <- users_json[[user]]$tz_label
+    user_list_df[user, "tz_offset"] <- users_json[[user]]$tz_offset
+  }
+  
+}
+#write user data to a csv to be read back in as df, as needed.
+slack_export_user_filename <- paste0(exportname,"_users.csv")
+write.csv(user_list_df, file = slack_export_user_filename)
+
+
+#TODO - same for channel metadata
