@@ -151,9 +151,8 @@ user_list_df <- setNames(data.frame(matrix(ncol = 11, nrow = 0)),
                          c("user_id", "team_id", "name", "deleted", "real_name",
                            "tz", "tz_label", "tz_offset", "title", "display_name", 
                            "is_bot"))
-#users 3 and 4 break this - check fields. Missing first_name and last_name. Don't need those...delete.
+#fill it with the appropriate fields from JSON
 for (user in 1:length(users_json)) {
-  #Make a df (user_list_df) with information about each user, from users.json
   user_list_df[user, "user_id"] <- users_json[[user]]$id
   user_list_df[user, "team_id"] <- users_json[[user]]$team_id
   user_list_df[user, "name"] <- users_json[[user]]$name
@@ -181,4 +180,7 @@ slack_export_user_filename <- paste0(exportname,"_users.csv")
 write.csv(user_list_df, file = slack_export_user_filename)
 
 
-#TODO - same for channel metadata
+#Write a csv for channel metadata
+#write user data to a csv to be read back in as df, as needed.
+slack_export_channel_filename <- paste0(exportname,"_channels.csv")
+write.csv(channel_list, file = slack_export_channel_filename)
