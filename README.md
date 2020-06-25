@@ -88,7 +88,7 @@ real_name | user's first and last name | Jessie Mueller
 tz | user's time zone location | America/Denver
 tz_label | user's time zone label in text | Mountain Daylight Time
 tz_offset | user's time zone offset in seconds from UTC | -21600
-title | user's title | 1592103591.002000
+title | user's title | Best Title Ever
 display_name | user's display name | UEGCN2DJL
 is_bot | boolean for if that user is a bot | TRUE
 
