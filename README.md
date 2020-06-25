@@ -60,8 +60,35 @@ parent_user_id | user ID that submitted the parent message of the thread | UEGCN
 channel | slack channel that this message exists in | general
 
 ### Schema for channel metadata
-..TBD! 
+If you're operating within R, the df that has this information and is written to CSV is `<channel_list>`
+
+Field | Description | Example
+ ------------- | ------------- | -------------
+ch_id | identifier for each channel | CEGD9JRH6
+name | channel name | general
+created | timestamp channel was created | 1543715389
+creator | person who created the channel | UEJGDHTGE
+is_archived | boolean if the channel is currently archived | FALSE
+is_general | boolean - general level channel access | TRUE
+members | comma-separated list of all members in channel at time of export | UEGCGGY3S, UEGCN2DJL, UEJGDHTGE
+topic | user-defined topic text | Non-work banter and water cooler conversation
+purpose | user-defined purpose text | This channel is for workspace-wide communication and announcements. All members are in this channel.
+
 
 ### Schema for user metadata
-..TBD!
+If you're operating within R, the df that has this information and is written to CSV is `<user_list_df>`
+
+Field | Description | Example
+ ------------- | ------------- | -------------
+user_id | user's unique identifier | UEGCGGY3S
+team_id | user's slack team identifier | TEH1KHUKV
+name | user's slack name | jessie.mueller
+deleted | boolean - is the user deleted | FALSE
+real_name | user's first and last name | Jessie Mueller
+tz | user's time zone location | America/Denver
+tz_label | user's time zone label in text | Mountain Daylight Time
+tz_offset | user's time zone offset in seconds from UTC | -21600
+title | user's title | 1592103591.002000
+display_name | user's display name | UEGCN2DJL
+is_bot | boolean for if that user is a bot | TRUE
 
